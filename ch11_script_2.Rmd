@@ -65,21 +65,46 @@ And, yes, it is somewhat awkward that `nest()` produces a column called `data` a
 county_bootstrap <- county_bootstrap %>%
   mutate(distinct_rows = map_dbl(data, ~ n_distinct(.)))
 
-county_bootstrap
 ```
 
 # Scene 10 
 
 **Prompt**  Now, using the starter code above, go ahead and add more columns. Make one called `mod` which will contains the model objects created by `lm()`. Then, add one called `reg_results` which will tidy the objects created by `lm()`, and then one called `disp_coef` which will display the regression coefficient for each bootstrap sample. Is all this a mystery? Check out chapter 11 in the *Primer*. 
 
+```{r 10, echo = FALSE}
+
+county_bootstrap <- county_bootstrap %>%
+  mutate(mod = map(data, ~ lm(poverty ~ less_than_hs, data = .))) %>%
+  mutate(reg_results = map(mod, ~ tidy(.))) %>%
+  mutate(disp_coef = map_dbl(reg_results, ~ filter(., term == "less_than_hs") %>%
+                               pull(estimate)))
+
+
+```
+
 # Scene 11 
 
 **Prompt** Create a confidence interval for the slope of our linear regression. What is the value at the 50th percentile? Is that expected? What is the 95% confidence interval? Provide a Bayesian and Frequentist interpretation of this interval.
 
+```{r 11, echo = FALSE}
+
+county_bootstrap %>%
+  pull(disp_coef) %>%
+  quantile(c(.025, .5, .975))
+
+```
 # Scene 12 
 
 **Prompt** Now, let's use a shortcut. Use the confidence intervals reported by `lm()` and `tidy()`. How do these results compare with those from the previous scene? 
 
+```{r 12, echo = FALSE}
+
+county_bootstrap %>% 
+  tidy(conf.int = TRUE) %>%
+  filter(term == "less_than_hs") %>%
+  select(estimate, conf.low, conf.high)
+
+```
 # Scene 13
 
 **Prompt** Alas, our data is missing Travis County in Texas. Suppose Travis County has 10.9% of adults with less than a high school degree. What do you think its poverty rate would be? Why? 
@@ -110,3 +135,20 @@ county_bootstrap
 
 **Prompt** Take a look at the babynames library. Create this animation: https://rpubs.com/ruchajoshi/bennetts
 
+
+
+```{r, echo=FALSE}
+library(babynames)
+babynames %>% 
+  filter(name %in% c("Elizabeth", "Jane", "Katherine", "Lydia", "Mary"),
+         sex == "F") %>% 
+  ggplot(aes(year, n, color = name, size = prop)) +
+  geom_line() +
+  geom_point() +
+  transition_reveal(year) +
+  ylab("Number of babies born") +
+  labs(title = "Popularity of American names in the previous 140 years",
+       color = "Name",
+       size = "Proportion") +
+  xlab("Year")
+```
